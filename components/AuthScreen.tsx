@@ -13,9 +13,7 @@ export default function AuthScreen() {
       return;
     }
     setBusy(true);
-    const creds = { email: email.trim(), password };
-    console.log('Intento de acceso', mode, creds);
-    const { error } =
+    const creds = { email: email.trim(), password };    const { error } =
       mode === 'login'
         ? await supabase.auth.signInWithPassword(creds)
         : await supabase.auth.signUp(creds);

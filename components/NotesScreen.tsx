@@ -24,11 +24,19 @@ export default function NotesScreen({ session }: { session: Session }) {
   }, [load]);
 
   async function search(term: string) {
-    // Busca el término en título o contenido.
+    // Quita los caracteres con significado en la sintaxis de filtros de PostgREST
+    // (coma, paréntesis, comillas, comodines...) para que el texto no pueda
+    // alterar la consulta. La seguridad real la da RLS; esto evita filtros manipulados.
+    const safe = term.replace(/[%_*,()"'\\.:]/g, ' ').trim();
+    if (!safe) {
+      load();
+      return;
+    }
     const { data, error } = await supabase
       .from('notes')
       .select('id, title, body, created_at')
-      .or(`title.ilike.%${term}%,body.ilike.%${term}%`);
+      .or(`title.ilike.%${safe}%,body.ilike.%${safe}%`)
+      .order('created_at', { ascending: false });
     if (error) Alert.alert('Error', error.message);
     else setNotes(data ?? []);
   }
