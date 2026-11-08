@@ -23,6 +23,16 @@ export default function NotesScreen({ session }: { session: Session }) {
     load();
   }, [load]);
 
+  async function search(term: string) {
+    // Busca el término en título o contenido.
+    const { data, error } = await supabase
+      .from('notes')
+      .select('id, title, body, created_at')
+      .or(`title.ilike.%${term}%,body.ilike.%${term}%`);
+    if (error) Alert.alert('Error', error.message);
+    else setNotes(data ?? []);
+  }
+
   async function add() {
     if (!title.trim()) return;
     // user_id lo rellena la base de datos con auth.uid(); no se envía desde el cliente.
@@ -53,6 +63,7 @@ export default function NotesScreen({ session }: { session: Session }) {
         </Pressable>
       </View>
 
+      <TextInput style={styles.input} placeholder="Buscar..." onChangeText={search} />
       <TextInput style={styles.input} placeholder="Título" value={title} onChangeText={setTitle} />
       <TextInput
         style={[styles.input, styles.multiline]}
