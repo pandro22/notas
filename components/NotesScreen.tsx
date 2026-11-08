@@ -23,6 +23,24 @@ export default function NotesScreen({ session }: { session: Session }) {
     load();
   }, [load]);
 
+  async function search(term: string) {
+    // Quita los caracteres con significado en la sintaxis de filtros de PostgREST
+    // (coma, paréntesis, comillas, comodines...) para que el texto no pueda
+    // alterar la consulta. La seguridad real la da RLS; esto evita filtros manipulados.
+    const safe = term.replace(/[%_*,()"'\\.:]/g, ' ').trim();
+    if (!safe) {
+      load();
+      return;
+    }
+    const { data, error } = await supabase
+      .from('notes')
+      .select('id, title, body, created_at')
+      .or(`title.ilike.%${safe}%,body.ilike.%${safe}%`)
+      .order('created_at', { ascending: false });
+    if (error) Alert.alert('Error', error.message);
+    else setNotes(data ?? []);
+  }
+
   async function add() {
     if (!title.trim()) return;
     // user_id lo rellena la base de datos con auth.uid(); no se envía desde el cliente.
@@ -53,6 +71,7 @@ export default function NotesScreen({ session }: { session: Session }) {
         </Pressable>
       </View>
 
+      <TextInput style={styles.input} placeholder="Buscar..." onChangeText={search} />
       <TextInput style={styles.input} placeholder="Título" value={title} onChangeText={setTitle} />
       <TextInput
         style={[styles.input, styles.multiline]}

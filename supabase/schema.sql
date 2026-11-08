@@ -7,6 +7,22 @@ create table public.notes (
   created_at timestamptz not null default now()
 );
 
--- VULNERABILIDAD DELIBERADA (para auditar despues):
--- RLS NO esta activado, asi que cualquier usuario puede leer/borrar las notas de todos.
--- alter table public.notes enable row level security;
+-- Row Level Security: cada usuario solo accede a SUS notas.
+alter table public.notes enable row level security;
+
+create policy "notes_select_own" on public.notes
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+create policy "notes_insert_own" on public.notes
+  for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+create policy "notes_update_own" on public.notes
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+create policy "notes_delete_own" on public.notes
+  for delete to authenticated
+  using ((select auth.uid()) = user_id);
