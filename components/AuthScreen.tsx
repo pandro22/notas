@@ -1,7 +1,9 @@
 import { useState } from 'react';
-// Alert: ventana emergente. Pressable: botón táctil. TextInput: caja de texto. StyleSheet: estilos.
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+// Alert: ventana emergente. Pressable: botón táctil. StyleSheet: estilos.
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '../lib/supabase';
+import Field from './Field';
+import { colors, fonts } from '../theme';
 
 // Pantalla de login y registro.
 export default function AuthScreen() {
@@ -18,7 +20,7 @@ export default function AuthScreen() {
     // Validación en el cliente: es una ayuda para el usuario, NO una medida de seguridad.
     // (La política real de contraseñas se configura en Supabase.)
     if (!email.trim() || password.length < 8) {
-      Alert.alert('Datos no válidos', 'Introduce un email y una contraseña de al menos 8 caracteres.');
+      Alert.alert('Revisa los datos', 'Escribe un email y una contraseña de al menos 8 caracteres.');
       return; // salimos sin llamar a Supabase
     }
     setBusy(true);
@@ -29,9 +31,9 @@ export default function AuthScreen() {
       mode === 'login' ? await supabase.auth.signInWithPassword(creds) : await supabase.auth.signUp(creds);
     setBusy(false);
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('No se pudo continuar', error.message);
     } else if (mode === 'signup') {
-      Alert.alert('Cuenta creada', 'Revisa tu email si pide confirmación.');
+      Alert.alert('Cuenta creada', 'Si se pide confirmación, revisa tu email.');
     }
     // Si el login va bien no hay que hacer nada más: App.tsx detecta la sesión nueva
     // con onAuthStateChange y cambia sola a la pantalla de notas.
@@ -39,20 +41,22 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mis notas</Text>
+      {/* Nombre de la app: lo único grande de la pantalla. */}
+      <Text style={styles.wordmark}>Notas</Text>
+      <Text style={styles.lead}>Entra para ver tus notas.</Text>
 
-      <TextInput
-        style={styles.input}
+      <Field
         placeholder="Email"
+        accessibilityLabel="Email"
         autoCapitalize="none" // no poner la primera letra en mayúscula
         keyboardType="email-address" // teclado con @
         autoComplete="email" // permite autorrelleno del sistema
         value={email} // el valor lo controla el estado...
         onChangeText={setEmail} // ...y cada cambio lo actualiza
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña (mín. 8)"
+      <Field
+        placeholder="Contraseña (mínimo 8 caracteres)"
+        accessibilityLabel="Contraseña"
         secureTextEntry={!showPassword} // oculta con puntos, salvo que el usuario pida verla
         autoCapitalize="none"
         autoComplete="password"
@@ -60,21 +64,29 @@ export default function AuthScreen() {
         onChangeText={setPassword}
       />
       {/* Alterna el estado: !showPassword invierte true/false. Al cambiar, React repinta la caja. */}
-      <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.toggle}>
+      <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.toggle} hitSlop={8}>
         <Text style={styles.toggleText}>{showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}</Text>
       </Pressable>
 
-      {/* style como lista: se combinan estilos; busy && styles.disabled solo se aplica si busy es true. */}
-      <Pressable style={[styles.btn, busy && styles.disabled]} disabled={busy} onPress={() => submit('login')}>
-        <Text style={styles.btnText}>Entrar</Text>
-      </Pressable>
-      <Pressable
-        style={[styles.btn, styles.secondary, busy && styles.disabled]}
-        disabled={busy}
-        onPress={() => submit('signup')}
-      >
-        <Text style={[styles.btnText, styles.secondaryText]}>Crear cuenta</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        {/* style como lista: se combinan estilos; busy && styles.disabled solo se aplica si busy es true. */}
+        <Pressable
+          style={[styles.btn, busy && styles.disabled]}
+          disabled={busy}
+          onPress={() => submit('login')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.btnText}>Entrar</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.btn, styles.btnOutline, busy && styles.disabled]}
+          disabled={busy}
+          onPress={() => submit('signup')}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.btnText, styles.btnOutlineText]}>Crear cuenta</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -82,14 +94,16 @@ export default function AuthScreen() {
 // Estilos (parecidos a CSS, pero en JavaScript). flex: 1 = ocupar toda la pantalla;
 // gap = separación entre elementos hijos.
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12, backgroundColor: '#fff' },
-  title: { fontSize: 32, fontWeight: '700', marginBottom: 16 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, fontSize: 16 },
-  btn: { backgroundColor: '#2563eb', borderRadius: 8, padding: 14, alignItems: 'center' },
-  secondary: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#2563eb' },
-  btnText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  secondaryText: { color: '#2563eb' },
-  toggle: { alignSelf: 'flex-end' }, // lo pega a la derecha, bajo la caja
-  toggleText: { color: '#2563eb', fontSize: 14 },
+  container: { flex: 1, justifyContent: 'center', padding: 28, gap: 8, backgroundColor: colors.paper },
+  wordmark: { fontFamily: fonts.serifBold, fontSize: 56, lineHeight: 62, color: colors.ink },
+  lead: { fontFamily: fonts.sans, fontSize: 16, color: colors.inkMuted, marginBottom: 24 },
+  toggle: { alignSelf: 'flex-start', paddingVertical: 4 },
+  toggleText: { fontFamily: fonts.sansMedium, fontSize: 14, color: colors.ink, textDecorationLine: 'underline' },
+  actions: { gap: 12, marginTop: 20 },
+  // Botones casi rectos (radio 4): nada de píldoras redondeadas.
+  btn: { backgroundColor: colors.ink, borderWidth: 2, borderColor: colors.ink, borderRadius: 4, paddingVertical: 14, alignItems: 'center' },
+  btnText: { fontFamily: fonts.sansSemi, fontSize: 16, color: colors.paper },
+  btnOutline: { backgroundColor: 'transparent' },
+  btnOutlineText: { color: colors.ink },
   disabled: { opacity: 0.5 },
 });

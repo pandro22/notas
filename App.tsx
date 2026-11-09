@@ -4,10 +4,14 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 // Controla la barra superior del móvil (hora, batería...).
 import { StatusBar } from 'expo-status-bar';
+// useFonts descarga y registra las tipografías antes de pintar la app.
+import { useFonts } from 'expo-font';
 // "import type": solo trae el TIPO Session para TypeScript; desaparece al compilar.
 import type { Session } from '@supabase/supabase-js';
 // Nuestra conexión única a Supabase (ver lib/supabase.ts).
 import { supabase } from './lib/supabase';
+// Colores y fuentes de la app (ver theme.ts).
+import { colors, fontAssets } from './theme';
 // Las dos pantallas de la app.
 import AuthScreen from './components/AuthScreen';
 import NotesScreen from './components/NotesScreen';
@@ -18,6 +22,8 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   // true mientras averiguamos si ya había una sesión guardada en el móvil.
   const [loading, setLoading] = useState(true);
+  // Carga las fuentes. Devuelve [cargadas, error]. Los hooks siempre se llaman antes de cualquier return.
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
 
   // El [] del final significa: ejecutar UNA sola vez, al abrir la app.
   useEffect(() => {
@@ -35,11 +41,12 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Mientras comprobamos la sesión, solo se ve la ruedita (evita un parpadeo del login).
-  if (loading) {
+  // Esperamos a la sesión Y a las fuentes. Si las fuentes fallan (fontError), seguimos igualmente
+  // con la fuente del sistema: la app es usable aunque no tenga la tipografía propia.
+  if (loading || !(fontsLoaded || fontError)) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: colors.paper }}>
+        <ActivityIndicator size="large" color={colors.ink} />
       </View>
     );
   }
@@ -49,7 +56,8 @@ export default function App() {
     <>
       {/* Si hay sesión -> notas (le pasamos la sesión como prop); si no -> login. */}
       {session ? <NotesScreen session={session} /> : <AuthScreen />}
-      <StatusBar style="auto" />
+      {/* Fondo claro: iconos de la barra oscuros. */}
+      <StatusBar style="dark" />
     </>
   );
 }
