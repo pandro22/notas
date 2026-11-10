@@ -1,9 +1,9 @@
 import { useState } from 'react';
 // Alert: ventana emergente. Pressable: botón táctil. StyleSheet: estilos.
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '../lib/supabase';
-import Field from './Field';
-import { colors, fonts } from '../theme';
+import { supabase } from '@/lib/supabase';
+import Field from '@/components/Field';
+import { colors, fonts } from '@/theme';
 
 // Pantalla de login y registro.
 export default function AuthScreen() {
